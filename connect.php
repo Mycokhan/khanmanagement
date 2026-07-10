@@ -4,22 +4,19 @@ $host = "mysql-2e04885e-michaelhaule689-1f49.j.aivencloud.com";
 $dbname = "defaultdb";
 $username = "avnadmin";
 $password = "AVNS_3C7MnuVLriS-XVorkXq";
-$port = "25263"; // Port maalumu kutoka Aiven iliyotajwa kwenye picha yako
+$port = "25263"; 
 
 try {
-    // Tumeongeza ;port=$port kwenye DSN string hapa chini
+    // Tumeunganisha host na port kwa kutumia colona ($host:$port) kuzuia error ya Linux socket kwenye Render
     $conn = new PDO(
-        "mysql:host=$host;dbname=$dbname;port=$port;charset=utf8",
+        "mysql:host=$host:$port;dbname=$dbname;charset=utf8",
         $username,
         $password
     );
-
+    
     $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
+    
 } catch (PDOException $e) {
-
     die("Connection Failed: " . $e->getMessage());
-
 }
-
 ?>
