@@ -1,14 +1,15 @@
 <?php
 
-$host = "localhost";
-$dbname = "messaging_system";
-$username = "root";
-$password = "mycokhan";
+$host = "mysql-2e04885e-michaelhaule689-1f49.j.aivencloud.com";
+$dbname = "defaultdb";
+$username = "avnadmin";
+$password = "AVNS_3C7MnuVLriS-XVorkXq";
+$port = "25263"; // Port maalumu kutoka Aiven iliyotajwa kwenye picha yako
 
 try {
-
+    // Tumeongeza ;port=$port kwenye DSN string hapa chini
     $conn = new PDO(
-        "mysql:host=$host;dbname=$dbname;charset=utf8",
+        "mysql:host=$host;dbname=$dbname;port=$port;charset=utf8",
         $username,
         $password
     );
