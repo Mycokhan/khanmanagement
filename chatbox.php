@@ -153,47 +153,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-if (isset($_POST['fetch_messages'])) {
-    header('Content-Type: application/json');
-    
-    $selected_type = $_POST['conversation_type'] ?? 'direct';
-    $selected_group_id = isset($_POST['group_id']) ? (int) $_POST['group_id'] : 0;
-    $selected_user_id = isset($_POST['receiver_id']) ? (int) $_POST['receiver_id'] : 0;
-    $last_id = isset($_POST['last_id']) ? (int) $_POST['last_id'] : 0;
-    
-    $messages = [];
-    
-    try {
-        if ($selected_type === 'group' && $selected_group_id > 0) {
-            $stmt = $conn->prepare("SELECT gm.id, gm.message, gm.created_at, gm.sender_id, u.full_name AS sender_name FROM group_messages gm JOIN users u ON u.id = gm.sender_id WHERE gm.group_id = ? AND gm.id > ? ORDER BY gm.created_at ASC");
-            $stmt->execute([$selected_group_id, $last_id]);
-            $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } elseif ($selected_type !== 'group' && $selected_user_id > 0) {
-            $stmt = $conn->prepare("SELECT dm.id, dm.message, dm.created_at, dm.sender_id, sender.full_name AS sender_name FROM direct_messages dm JOIN users sender ON sender.id = dm.sender_id WHERE ((dm.sender_id = ? AND dm.receiver_id = ?) OR (dm.sender_id = ? AND dm.receiver_id = ?)) AND dm.id > ? ORDER BY dm.created_at ASC");
-            $stmt->execute([$current_user_id, $selected_user_id, $selected_user_id, $current_user_id, $last_id]);
-            $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        }
-    } catch (PDOException $e) {
-        echo json_encode(['success' => false, 'error' => 'Database error']);
-        exit();
-    }
-    
-    $response_messages = [];
-    foreach ($messages as $msg) {
-        $is_self = (int) $msg['sender_id'] === $current_user_id;
-        $response_messages[] = [
-            'id' => (int) $msg['id'],
-            'message_html' => nl2br(htmlspecialchars($msg['message'])),
-            'sender_name' => htmlspecialchars($msg['sender_name']),
-            'time_formatted' => date('M d, H:i', strtotime($msg['created_at'])),
-            'is_self' => $is_self
-        ];
-    }
-    
-    echo json_encode(['success' => true, 'messages' => $response_messages]);
-    exit();
-}
-
 $stmt = $conn->prepare("SELECT id, full_name FROM users WHERE id != ? ORDER BY full_name ASC");
 $stmt->execute([$current_user_id]);
 $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -259,7 +218,7 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
     </style>
 </head>
 <body>
-    <div class = "todashboard">
+    <div class="todashboard">
         <button><a href="dashboard.php">🏠 Dashboard</a></button>
     </div>
 <div class="container">
@@ -372,74 +331,113 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
 </div>
 
 <script>
-    let lastMessageId = 0;
     let selectedType = '<?php echo htmlspecialchars($selected_type); ?>';
     let selectedUserId = <?php echo (int) $selected_user_id; ?>;
     let selectedGroupId = <?php echo (int) $selected_group_id; ?>;
+    let currentUserId = <?php echo (int) $current_user_id; ?>;
     const chatWindow = document.querySelector('.chat-window');
+    const messageForm = document.querySelector('.box form:has(textarea), form[method="post"]:has(textarea)');
 
-    function formatTime(dateStr) {
-        const date = new Date(dateStr);
-        const month = date.toLocaleDateString('en-US', { month: 'short' });
-        const day = String(date.getDate()).padStart(2, '0');
-        const hours = String(date.getHours()).padStart(2, '0');
-        const mins = String(date.getMinutes()).padStart(2, '0');
-        return `${month} ${day}, ${hours}:${mins}`;
-    }
+    // 1. LINK YAKO YA WEBSOCKET YA RENDER (WSS)
+    const socket = new WebSocket('wss://khanmanagement-1.onrender.com');
 
-    function fetchNewMessages() {
-        if (!chatWindow) return;
-        if (selectedType === 'direct' && selectedUserId <= 0) return;
-        if (selectedType === 'group' && selectedGroupId <= 0) return;
+    socket.onopen = () => {
+        console.log('Connected to WebSocket Server on Render!');
+        
+        // Msajili mtumiaji kwenye server ili ajulikane yupo online
+        socket.send(JSON.stringify({
+            type: 'register',
+            user_id: currentUserId
+        }));
+    };
 
-        const params = new URLSearchParams();
-        params.append('fetch_messages', '1');
-        params.append('conversation_type', selectedType);
-        if (selectedType === 'direct') {
-            params.append('receiver_id', selectedUserId);
-        } else {
-            params.append('group_id', selectedGroupId);
-        }
-        params.append('last_id', lastMessageId);
+    // 2. POKEA MESEJI KUTOKA KULE RENDER SEVA YA WEBSOCKET
+    socket.onmessage = (event) => {
+        try {
+            const data = JSON.parse(event.data);
 
-        fetch('chatbox.php', {
-            method: 'POST',
-            body: params
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success && data.messages && data.messages.length > 0) {
-                data.messages.forEach(msg => {
+            // Angalia kama ujumbe ni wa aina ya 'message'
+            if (data.type === 'message') {
+                let shouldDisplay = false;
+
+                if (selectedType === 'group' && data.conversation_type === 'group' && parseInt(data.group_id) === selectedGroupId) {
+                    shouldDisplay = true;
+                } else if (selectedType === 'direct' && data.conversation_type === 'direct' && 
+                          (parseInt(data.sender_id) === selectedUserId || parseInt(data.receiver_id) === selectedUserId)) {
+                    shouldDisplay = true;
+                }
+
+                if (shouldDisplay) {
                     const bubble = document.createElement('div');
-                    const isSelf = msg.is_self === true || msg.is_self === 1;
+                    const isSelf = parseInt(data.sender_id) === currentUserId;
+                    
                     bubble.className = 'bubble ' + (isSelf ? 'self' : 'other');
-                    bubble.setAttribute('data-id', msg.id);
                     bubble.innerHTML = `
                         <div class="meta">
-                            ${isSelf ? 'You' : msg.sender_name}
-                            • ${msg.time_formatted}
+                            ${isSelf ? 'You' : htmlspecialchars(data.sender_name)}
+                            • ${data.time_formatted}
                         </div>
-                        ${msg.message_html}
+                        ${data.message_html}
                     `;
                     chatWindow.appendChild(bubble);
-                    lastMessageId = msg.id;
-                });
-                chatWindow.scrollTop = chatWindow.scrollHeight;
+                    chatWindow.scrollTop = chatWindow.scrollHeight;
+                }
             }
-        })
-        .catch(error => console.error('Error fetching messages:', error));
+        } catch (e) {
+            console.error("Error parsing message data:", e);
+        }
+    };
+
+    socket.onerror = (error) => {
+        console.error('WebSocket Error:', error);
+    };
+
+    socket.onclose = () => {
+        console.log('WebSocket disconnected. Reconnecting might be needed.');
+    };
+
+    // 3. TUMA DATA KWENYE WEBSOCKET KABLA YA FOMU YA PHP HAIJARELOAD
+    if (messageForm) {
+        messageForm.addEventListener('submit', function(e) {
+            const textarea = this.querySelector('textarea[name="message_text"]');
+            const messageText = textarea.value.trim();
+            
+            if (messageText !== '' && socket.readyState === WebSocket.OPEN) {
+                const now = new Date();
+                const timeFormatted = now.toLocaleDateString('en-US', { month: 'short' }) + " " + 
+                                     String(now.getDate()).padStart(2, '0') + ", " + 
+                                     String(now.getHours()).padStart(2, '0') + ":" + 
+                                     String(now.getMinutes()).padStart(2, '0');
+
+                const payload = {
+                    type: 'message',
+                    conversation_type: selectedType,
+                    sender_id: currentUserId,
+                    sender_name: '<?php echo htmlspecialchars($current_user_name); ?>',
+                    message_text: messageText,
+                    message_html: messageText.replace(/\n/g, '<br>'), // Inabadilisha newlines kuwa HTML linebreaks
+                    receiver_id: selectedUserId,
+                    group_id: selectedGroupId,
+                    time_formatted: timeFormatted
+                };
+                
+                // Tuma kupitia WebSocket
+                socket.send(JSON.stringify(payload));
+            }
+        });
     }
 
+    // Sogeza kioo chini pindi ukurasa ukimaliza kufunguka
     document.addEventListener('DOMContentLoaded', () => {
         if (chatWindow) {
             chatWindow.scrollTop = chatWindow.scrollHeight;
-            const bubbles = chatWindow.querySelectorAll('.bubble');
-            if (bubbles.length > 0) {
-                lastMessageId = parseInt(bubbles[bubbles.length - 1].getAttribute('data-id') || '0');
-            }
         }
-        setInterval(fetchNewMessages, 2000);
     });
+
+    // Kazi ndogo ya kuzuia HTML injection (XSS Protection)
+    function htmlspecialchars(string) {
+        return string.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
 </script>
 </body>
 </html>
