@@ -4,12 +4,12 @@ $host = "mysql-2e04885e-michaelhaule689-1f49.j.aivencloud.com";
 $dbname = "defaultdb";
 $username = "avnadmin";
 $password = "AVNS_3C7MnuVLriS-XVorkXq";
-$port = "25263"; 
+$port = "25263";
 
 try {
-    // Tumeunganisha host na port kwa kutumia colona ($host:$port) kuzuia error ya Linux socket kwenye Render
+    // Imerekebishwa hapa: protocol=TCP inaiambia PHP isitafute 'file or directory' ya local sock
     $conn = new PDO(
-        "mysql:host=$host:$port;dbname=$dbname;charset=utf8",
+        "mysql:host=$host;port=$port;dbname=$dbname;charset=utf8;protocol=TCP",
         $username,
         $password
     );
