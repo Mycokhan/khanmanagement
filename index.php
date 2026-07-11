@@ -33,6 +33,7 @@ if (isset($_SESSION['user_id'])) {
             flex-direction: column;
             min-height: 100vh;
             margin-left: 270px; /* Adjust for sidebar width */
+            overflow-x: hidden;
         }
 
         /* Top Navigation Bar */
@@ -170,6 +171,61 @@ if (isset($_SESSION['user_id'])) {
             text-align: center;
             padding: 20px;
             font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                margin-left: 0;
+            }
+
+            .sidebar {
+                display: none;
+            }
+
+            .navbar {
+                padding: 15px 20px;
+                height: auto;
+            }
+
+            .navbar .logo {
+                font-size: 18px;
+            }
+
+            .hero-container {
+                padding: 20px 15px;
+                align-items: flex-start;
+            }
+
+            .hero-card {
+                padding: 24px 18px;
+            }
+
+            .hero-card h1 {
+                font-size: 24px;
+            }
+
+            .hero-card p {
+                font-size: 15px;
+            }
+
+            .system-features {
+                flex-direction: column;
+                gap: 10px;
+                padding: 12px;
+            }
+
+            .feature-item {
+                text-align: center;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .btn {
+                max-width: none;
+            }
         }
    
     </style>
