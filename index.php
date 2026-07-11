@@ -60,6 +60,27 @@ if (isset($_SESSION['user_id'])) {
             letter-spacing: 0.5px;
         }
 
+        .mobile-menu-toggle {
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            gap: 4px;
+            background: #0d6efd;
+            border: none;
+            border-radius: 6px;
+            padding: 8px;
+            cursor: pointer;
+            margin-right: 12px;
+        }
+
+        .mobile-menu-toggle span {
+            display: block;
+            width: 22px;
+            height: 2px;
+            background: #fff;
+            border-radius: 2px;
+        }
+
         .navbar .nav-links a {
             text-decoration: none;
             color: #495057;
@@ -178,13 +199,41 @@ if (isset($_SESSION['user_id'])) {
                 margin-left: 0;
             }
 
-            .sidebar {
-                display: none;
+            .mobile-menu-toggle {
+                display: flex;
             }
 
             .navbar {
                 padding: 15px 20px;
                 height: auto;
+                justify-content: flex-start;
+            }
+
+            .navbar .logo {
+                margin-left: 8px;
+            }
+
+            .sidebar {
+                display: block;
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+                z-index: 1100;
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .mobile-nav-overlay {
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.35);
+                z-index: 1000;
+                display: none;
+            }
+
+            .mobile-nav-overlay.show {
+                display: block;
             }
 
             .navbar .logo {
@@ -232,7 +281,14 @@ if (isset($_SESSION['user_id'])) {
 </head>
 <body>
 
+    <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
+
     <div class="navbar">
+        <button class="mobile-menu-toggle" id="mobileMenuToggle" type="button" aria-label="Open menu">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
         <div class="logo">💼 MYCOKHAN</div>
         <!-- <div class="nav-links">
             <a href="login.php">Login</a>
@@ -264,6 +320,35 @@ if (isset($_SESSION['user_id'])) {
     <div class="footer">
         &copy; <?php echo date("Y"); ?> MYCOKHAN Office Management System. All Rights Reserved.
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const toggle = document.getElementById('mobileMenuToggle');
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.getElementById('mobileNavOverlay');
+
+            if (!toggle || !sidebar || !overlay) {
+                return;
+            }
+
+            toggle.addEventListener('click', function () {
+                sidebar.classList.toggle('open');
+                overlay.classList.toggle('show');
+            });
+
+            overlay.addEventListener('click', function () {
+                sidebar.classList.remove('open');
+                overlay.classList.remove('show');
+            });
+
+            sidebar.querySelectorAll('a').forEach(function (link) {
+                link.addEventListener('click', function () {
+                    sidebar.classList.remove('open');
+                    overlay.classList.remove('show');
+                });
+            });
+        });
+    </script>
 
 </body>
 </html>
