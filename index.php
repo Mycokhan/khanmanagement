@@ -331,9 +331,12 @@ if (isset($_SESSION['user_id'])) {
                 return;
             }
 
-            toggle.addEventListener('click', function () {
-                sidebar.classList.toggle('open');
-                overlay.classList.toggle('show');
+            toggle.addEventListener('click', function (event) {
+                event.stopPropagation();
+                const isOpen = sidebar.classList.contains('open');
+
+                sidebar.classList.toggle('open', !isOpen);
+                overlay.classList.toggle('show', !isOpen);
             });
 
             overlay.addEventListener('click', function () {
