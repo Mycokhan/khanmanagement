@@ -269,7 +269,8 @@ Login
 
 Don't have an account?
 
-<a href="index.php">
+<!-- MABORESHO: Iliyoongozwa kwenda kwenye register.php -->
+<a href="register.php">
 
 Register Here
 
@@ -278,3 +279,6 @@ Register Here
 </div>
 
 </div>
+
+</body>
+</html>
