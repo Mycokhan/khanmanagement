@@ -308,7 +308,6 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
                             <?php $is_selected = ($selected_user_id === (int) $user['id']); ?>
                             <label class="<?php echo $is_selected ? 'selected-user' : ''; ?>">
                                 <input type="radio" name="receiver_id" value="<?php echo (int) $user['id']; ?>" <?php echo $is_selected ? 'checked' : ''; ?> onchange="this.form.submit()">
-                                <!-- MABORESHO: Tumeongeza span yenye data-user-id hapa kwa ajili ya taa ya kijani/kijivu -->
                                 <span class="status-dot" data-user-id="<?php echo (int) $user['id']; ?>"></span>
                                 <?php echo htmlspecialchars($user['full_name']); ?>
                             </label>
@@ -347,7 +346,7 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
         <?php else: ?>
             <div class="chat-window">
                 <?php if (empty($messages)): ?>
-                    <p class="small">No messages yet. Start the conversation below.</p>
+                    <p class="small" id="no-messages-placeholder">No messages yet. Start the conversation below.</p>
                 <?php else: ?>
                     <?php foreach ($messages as $row): ?>
                         <?php $is_self = ((int) $row['sender_id'] === $current_user_id); ?>
@@ -362,7 +361,8 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
                 <?php endif; ?>
             </div>
 
-            <form method="post" style="margin-top: 15px;">
+            <!-- Tumeongeza id="chat-message-form" hapa ili kuidhibiti kwenye JavaScript -->
+            <form method="post" id="chat-message-form" style="margin-top: 15px;">
                 <input type="hidden" name="send_message" value="1">
                 <input type="hidden" name="conversation_type" value="<?php echo htmlspecialchars($selected_type); ?>">
                 <?php if ($selected_type === 'group'): ?>
@@ -383,7 +383,9 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
     let selectedGroupId = <?php echo (int) $selected_group_id; ?>;
     let currentUserId = <?php echo (int) $current_user_id; ?>;
     const chatWindow = document.querySelector('.chat-window');
-    const messageForm = document.querySelector('.box form:has(textarea), form[method="post"]:has(textarea)');
+    
+    // MABORESHO: Kulenga hasa form ya kutuma meseji kwa usahihi
+    const messageForm = document.getElementById('chat-message-form');
 
     const socket = new WebSocket('wss://khanmanagement-1.onrender.com');
 
@@ -400,7 +402,6 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
         try {
             const data = JSON.parse(event.data);
 
-            // MABORESHO: Hapa tunapokea list ya wale waliopo online kutoka server
             if (data.type === 'online_status') {
                 updateOnlineStatus(data.users);
             }
@@ -416,6 +417,12 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
                 }
 
                 if (shouldDisplay) {
+                    // Ondoa lile neno "No messages yet" kama lipo kabla ya kuweka bubble mpya
+                    const placeholder = document.getElementById('no-messages-placeholder');
+                    if (placeholder) {
+                        placeholder.remove();
+                    }
+
                     const bubble = document.createElement('div');
                     const isSelf = parseInt(data.sender_id) === currentUserId;
                     
@@ -436,7 +443,6 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
         }
     };
 
-    // MABORESHO: Function inayowasha taa za kijani kwa walio online na kijivu kwa walio offline
     function updateOnlineStatus(onlineUserIds) {
         document.querySelectorAll('.status-dot').forEach(dot => {
             const userId = parseInt(dot.getAttribute('data-user-id'));
@@ -458,6 +464,9 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
 
     if (messageForm) {
         messageForm.addEventListener('submit', function(e) {
+            // MABORESHO 1: Zuia mfumo wa PHP usisababishe page ku-refresh (No reloading)
+            e.preventDefault(); 
+
             const textarea = this.querySelector('textarea[name="message_text"]');
             const messageText = textarea.value.trim();
             
@@ -481,6 +490,10 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
                 };
                 
                 socket.send(JSON.stringify(payload));
+
+                // MABORESHO 2: Safisha textarea iwe tupu baada ya kutuma ujumbe
+                textarea.value = ''; 
+                textarea.focus();
             }
         });
     }
