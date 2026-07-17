@@ -52,7 +52,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $role
             ])){
 
-                $message="Registration Successful.";
+                // MABORESHO: Muishe mtumiaji kwenye Session hapa hapa akimaliza kujisajili
+                $new_user_id = $conn->lastInsertId(); // Tunapata ID yake mpya kutoka kwenye database
+                
+                $_SESSION['user_id'] = $new_user_id;
+                $_SESSION['full_name'] = $full_name;
+                $_SESSION['role'] = $role;
+
+                // Mpeleke moja kwa moja kwenye chatbox ili akifika huko dot iwe ya kijani papo hapo!
+                header("Location: chatbox.php");
+                exit();
 
             }else{
 
