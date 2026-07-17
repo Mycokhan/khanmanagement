@@ -205,7 +205,6 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
         .meta { font-size: 12px; opacity: 0.75; margin-bottom: 4px; }
         .small { font-size: 13px; color: #6c757d; }
         
-        /* Custom Custom Dropdown scroll layout kwa ajili ya Recipient na Members */
         .member-dropdown-container {
             border: 1px solid #ced4da;
             border-radius: 6px;
@@ -236,6 +235,21 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
             background: #e9f2ff;
             font-weight: bold;
             border-left: 3px solid #0d6efd;
+        }
+
+        /* MABORESHO: CSS ya Dot ya Online na Offline */
+        .status-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+            background-color: #9ca3af; /* Default: Gray (Offline) */
+            transition: background-color 0.3s ease;
+        }
+        .status-dot.online {
+            background-color: #22c55e; /* Kijani (Online) */
+            box-shadow: 0 0 6px #22c55e;
         }
 
         .todashboard { margin-bottom: 20px; }
@@ -286,7 +300,6 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
                     </select>
                 </form>
             <?php else: ?>
-                <!-- MABORESHO: Sehemu ya Recipient sasa inatumia Div ya Scroll badala ya Select ndefu -->
                 <form method="get" id="recipient-form">
                     <input type="hidden" name="conversation_type" value="direct">
                     <label>Recipient (Select a member)</label>
@@ -295,6 +308,8 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
                             <?php $is_selected = ($selected_user_id === (int) $user['id']); ?>
                             <label class="<?php echo $is_selected ? 'selected-user' : ''; ?>">
                                 <input type="radio" name="receiver_id" value="<?php echo (int) $user['id']; ?>" <?php echo $is_selected ? 'checked' : ''; ?> onchange="this.form.submit()">
+                                <!-- MABORESHO: Tumeongeza span yenye data-user-id hapa kwa ajili ya taa ya kijani/kijivu -->
+                                <span class="status-dot" data-user-id="<?php echo (int) $user['id']; ?>"></span>
                                 <?php echo htmlspecialchars($user['full_name']); ?>
                             </label>
                         <?php endforeach; ?>
@@ -385,6 +400,11 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
         try {
             const data = JSON.parse(event.data);
 
+            // MABORESHO: Hapa tunapokea list ya wale waliopo online kutoka server
+            if (data.type === 'online_status') {
+                updateOnlineStatus(data.users);
+            }
+
             if (data.type === 'message') {
                 let shouldDisplay = false;
 
@@ -415,6 +435,18 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
             console.error("Error parsing message data:", e);
         }
     };
+
+    // MABORESHO: Function inayowasha taa za kijani kwa walio online na kijivu kwa walio offline
+    function updateOnlineStatus(onlineUserIds) {
+        document.querySelectorAll('.status-dot').forEach(dot => {
+            const userId = parseInt(dot.getAttribute('data-user-id'));
+            if (onlineUserIds.includes(userId)) {
+                dot.classList.add('online');
+            } else {
+                dot.classList.remove('online');
+            }
+        });
+    }
 
     socket.onerror = (error) => {
         console.error('WebSocket Error:', error);
