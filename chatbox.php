@@ -260,14 +260,14 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
                             <option value="<?php echo (int) $user['id']; ?>" <?php echo $selected_user_id === (int) $user['id'] ? 'selected' : ''; ?>><?php echo htmlspecialchars($user['full_name']); ?></option>
                         <?php endforeach; ?>
                     </select>
-                    <div class="member-list">
+                    <!-- <div class="member-list">
                         <?php foreach ($users as $user): ?>
                             <a class="member-item <?php echo $selected_user_id === (int) $user['id'] ? 'active' : ''; ?>" href="chatbox.php?conversation_type=direct&receiver_id=<?php echo (int) $user['id']; ?>">
                                 <?php echo htmlspecialchars($user['full_name']); ?>
                             </a>
                         <?php endforeach; ?>
                     </div>
-                <?php endif; ?>
+                <?php endif; ?> -->
             </form>
         </div>
 
