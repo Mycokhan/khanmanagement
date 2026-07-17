@@ -32,13 +32,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $stmt = $conn->prepare($sql);
         $stmt->execute([$email]);
 
-        $user = $stmt->fetch();
+        // MABORESHO 1: Kulazimisha PDO ifetch kwa kutumia Column Names pekee (FETCH_ASSOC)
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($user) {
 
             if (password_verify($password, $user['password'])) {
 
-                $_SESSION['user_id'] = $user['id'];
+                // MABORESHO 2: Kulazimisha ID ihifadhiwe kama namba halisi (Integer) kwenye Session
+                $_SESSION['user_id'] = (int)$user['id'];
                 $_SESSION['full_name'] = $user['full_name'];
                 $_SESSION['role'] = $user['role'];
 
@@ -269,7 +271,6 @@ Login
 
 Don't have an account?
 
-<!-- MABORESHO: Iliyoongozwa kwenda kwenye register.php -->
 <a href="register.php">
 
 Register Here
