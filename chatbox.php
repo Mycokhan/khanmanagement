@@ -1,4 +1,5 @@
 <?php
+ob_start(); // Inazuia kosa la "Headers already sent" kwa kuhifadhi output kwanza
 session_start();
 
 require "connect.php";
@@ -237,18 +238,17 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
             border-left: 3px solid #0d6efd;
         }
 
-        /* CSS ya Dot ya Online na Offline */
         .status-dot {
             width: 9px;
             height: 9px;
             border-radius: 50%;
             display: inline-block;
             margin-right: 8px;
-            background-color: #9ca3af; /* Default: Gray (Offline) */
+            background-color: #9ca3af;
             transition: background-color 0.3s ease;
         }
         .status-dot.online {
-            background-color: #22c55e; /* Kijani (Online) */
+            background-color: #22c55e;
             box-shadow: 0 0 6px #22c55e;
         }
 
@@ -384,11 +384,11 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
     const chatWindow = document.querySelector('.chat-window');
     const messageForm = document.getElementById('chat-message-form');
 
-    // MABORESHO 1: Link inalenga njia mpya ya /ws kupitia port kuu ya Render ya .htaccess
-    const socket = new WebSocket('wss://khanmanagement-1.onrender.com/ws');
+    // MABORESHO: Tumeondoa '/ws' mwishoni ili kuachana na dhoruba za .htaccess proxy ya Render
+    const socket = new WebSocket('wss://khanmanagement-1.onrender.com');
 
     socket.onopen = () => {
-        console.log('Connected to WebSocket Server on Render through Reverse Proxy!');
+        console.log('Connected to WebSocket Server on Render directly!');
         
         socket.send(JSON.stringify({
             type: 'register',
@@ -400,7 +400,6 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
         try {
             const data = JSON.parse(event.data);
 
-            // MABORESHO 2: Kukubali data za 'online_status' au 'online_users'
             if (data.type === 'online_status' || data.type === 'online_users') {
                 updateOnlineStatus(data.users || data.onlineUserIds);
             }
@@ -441,7 +440,6 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
         }
     };
 
-    // MABORESHO 3: Kubadilisha ID zote kuwa String ili kuzuia String vs Integer type matching error
     function updateOnlineStatus(onlineUserIds) {
         if (!onlineUserIds || !Array.isArray(onlineUserIds)) return;
         const stringOnlineIds = onlineUserIds.map(id => String(id));
@@ -461,7 +459,7 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
     };
 
     socket.onclose = () => {
-        console.log('WebSocket disconnected. Reconnecting might be needed.');
+        console.log('WebSocket disconnected.');
     };
 
     if (messageForm) {
