@@ -205,7 +205,7 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
         .meta { font-size: 12px; opacity: 0.75; margin-bottom: 4px; }
         .small { font-size: 13px; color: #6c757d; }
         
-        /* Muundo wa kisasa wa kuteua wajumbe wa kikundi bila kujaza nafasi */
+        /* Custom Custom Dropdown scroll layout kwa ajili ya Recipient na Members */
         .member-dropdown-container {
             border: 1px solid #ced4da;
             border-radius: 6px;
@@ -227,9 +227,15 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
         .member-dropdown-container label:hover {
             background: #f0f6ff;
         }
-        .member-dropdown-container input[type="checkbox"] {
+        .member-dropdown-container input[type="checkbox"],
+        .member-dropdown-container input[type="radio"] {
             margin-right: 10px;
             width: auto;
+        }
+        .member-dropdown-container label.selected-user {
+            background: #e9f2ff;
+            font-weight: bold;
+            border-left: 3px solid #0d6efd;
         }
 
         .todashboard { margin-bottom: 20px; }
@@ -260,30 +266,41 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
     <div class="panel">
         <div class="box">
             <h3>Switch conversation</h3>
-            <form method="post">
+            <form method="get" id="switch-type-form">
                 <label>Conversation type</label>
                 <select name="conversation_type" onchange="this.form.submit()">
                     <option value="direct" <?php echo $selected_type === 'direct' ? 'selected' : ''; ?>>Direct Message</option>
                     <option value="group" <?php echo $selected_type === 'group' ? 'selected' : ''; ?>>Group Message</option>
                 </select>
-                <br><br>
-                <?php if ($selected_type === 'group'): ?>
+            </form>
+            <br>
+            
+            <?php if ($selected_type === 'group'): ?>
+                <form method="get">
+                    <input type="hidden" name="conversation_type" value="group">
                     <label>Group</label>
                     <select name="group_id" onchange="this.form.submit()">
                         <?php foreach ($groups as $group): ?>
                             <option value="<?php echo (int) $group['id']; ?>" <?php echo $selected_group_id === (int) $group['id'] ? 'selected' : ''; ?>><?php echo htmlspecialchars($group['name']); ?></option>
                         <?php endforeach; ?>
                     </select>
-                <?php else: ?>
-                    <label>Recipient</label>
-                    <select name="receiver_id" onchange="this.form.submit()">
-                        <option value="0" <?php echo $selected_user_id <= 0 ? 'selected' : ''; ?>>Select a member</option>
+                </form>
+            <?php else: ?>
+                <!-- MABORESHO: Sehemu ya Recipient sasa inatumia Div ya Scroll badala ya Select ndefu -->
+                <form method="get" id="recipient-form">
+                    <input type="hidden" name="conversation_type" value="direct">
+                    <label>Recipient (Select a member)</label>
+                    <div class="member-dropdown-container">
                         <?php foreach ($users as $user): ?>
-                            <option value="<?php echo (int) $user['id']; ?>" <?php echo $selected_user_id === (int) $user['id'] ? 'selected' : ''; ?>><?php echo htmlspecialchars($user['full_name']); ?></option>
+                            <?php $is_selected = ($selected_user_id === (int) $user['id']); ?>
+                            <label class="<?php echo $is_selected ? 'selected-user' : ''; ?>">
+                                <input type="radio" name="receiver_id" value="<?php echo (int) $user['id']; ?>" <?php echo $is_selected ? 'checked' : ''; ?> onchange="this.form.submit()">
+                                <?php echo htmlspecialchars($user['full_name']); ?>
+                            </label>
                         <?php endforeach; ?>
-                    </select>
-                <?php endif; ?>
-            </form>
+                    </div>
+                </form>
+            <?php endif; ?>
         </div>
 
         <div class="box">
@@ -353,7 +370,6 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
     const chatWindow = document.querySelector('.chat-window');
     const messageForm = document.querySelector('.box form:has(textarea), form[method="post"]:has(textarea)');
 
-    // 1. LINK YAKO YA WEBSOCKET YA RENDER (WSS)
     const socket = new WebSocket('wss://khanmanagement-1.onrender.com');
 
     socket.onopen = () => {
@@ -365,7 +381,6 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
         }));
     };
 
-    // 2. POKEA MESEJI KUTOKA KULE RENDER SEVA YA WEBSOCKET
     socket.onmessage = (event) => {
         try {
             const data = JSON.parse(event.data);
