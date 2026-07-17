@@ -157,7 +157,7 @@ $stmt = $conn->prepare("SELECT id, full_name FROM users WHERE id != ? ORDER BY f
 $stmt->execute([$current_user_id]);
 $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-$stmt = $conn->prepare("SELECT g.id, g.name, g.description FROM `groups` g JOIN group_members gm ON gm.group_id = g.id WHERE gm.user_id = ? ORDER BY g.name ASC");
+$stmt = $conn->prepare("SELECT g.id, g.name, g.description FROM `groups` g JOIN group_members gm ON gm.group_id = g.id WHERE gm.user_id = ? ORDER g.name ASC");
 $stmt->execute([$current_user_id]);
 $groups = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -196,7 +196,7 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
         .alert-danger { background: #f8d7da; color: #842029; }
         .panel { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
         .box { border: 1px solid #e5e7eb; border-radius: 10px; padding: 15px; background: #fcfdff; }
-        select, input[type="text"], textarea { width: 100%; padding: 10px; margin-top: 6px; border: 1px solid #ced4da; border-radius: 6px; }
+        select, input[type="text"], textarea { width: 100%; padding: 10px; margin-top: 6px; border: 1px solid #ced4da; border-radius: 6px; box-sizing: border-box; }
         button { background: #0d6efd; color: white; border: 0; padding: 10px 14px; border-radius: 6px; cursor: pointer; margin-top: 10px; }
         .chat-window { border: 1px solid #e5e7eb; border-radius: 10px; padding: 15px; min-height: 300px; max-height: 420px; overflow-y: auto; background: #f9fbff; }
         .bubble { padding: 10px 12px; border-radius: 10px; margin-bottom: 8px; max-width: 80%; }
@@ -204,12 +204,34 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
         .bubble.other { background: #e9f2ff; color: #222; }
         .meta { font-size: 12px; opacity: 0.75; margin-bottom: 4px; }
         .small { font-size: 13px; color: #6c757d; }
-        .inline-list { display: flex; flex-wrap: wrap; gap: 8px; }
-        .inline-list label { background: #eef4ff; padding: 5px 8px; border-radius: 6px; }
-        .member-list { display: grid; gap: 8px; margin-top: 10px; }
-        .member-item { display: block; padding: 10px 12px; border: 1px solid #dbeafe; border-radius: 8px; text-decoration: none; color: #1d4ed8; background: #f8fbff; }
-        .member-item.active { background: #dbeafe; border-color: #93c5fd; }
-        .member-item:hover { background: #eff6ff; }
+        
+        /* Muundo wa kisasa wa kuteua wajumbe wa kikundi bila kujaza nafasi */
+        .member-dropdown-container {
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            max-height: 150px;
+            overflow-y: auto;
+            padding: 8px;
+            background: #fff;
+            margin-top: 6px;
+        }
+        .member-dropdown-container label {
+            display: flex;
+            align-items: center;
+            padding: 6px;
+            margin: 2px 0;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .member-dropdown-container label:hover {
+            background: #f0f6ff;
+        }
+        .member-dropdown-container input[type="checkbox"] {
+            margin-right: 10px;
+            width: auto;
+        }
+
         .todashboard { margin-bottom: 20px; }
         .todashboard button { background: #198754; color: white; border: 0; padding: 10px 14px; border-radius: 6px; cursor: pointer; }
         .todashboard button a { color: white; text-decoration: none; }
@@ -260,14 +282,7 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
                             <option value="<?php echo (int) $user['id']; ?>" <?php echo $selected_user_id === (int) $user['id'] ? 'selected' : ''; ?>><?php echo htmlspecialchars($user['full_name']); ?></option>
                         <?php endforeach; ?>
                     </select>
-                    <!-- <div class="member-list">
-                        <?php foreach ($users as $user): ?>
-                            <a class="member-item <?php echo $selected_user_id === (int) $user['id'] ? 'active' : ''; ?>" href="chatbox.php?conversation_type=direct&receiver_id=<?php echo (int) $user['id']; ?>">
-                                <?php echo htmlspecialchars($user['full_name']); ?>
-                            </a>
-                        <?php endforeach; ?>
-                    </div>
-                <?php endif; ?> -->
+                <?php endif; ?>
             </form>
         </div>
 
@@ -280,7 +295,7 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
                 <label>Description</label>
                 <input type="text" name="group_description" placeholder="Optional description">
                 <label>Select members</label>
-                <div class="inline-list">
+                <div class="member-dropdown-container">
                     <?php foreach ($users as $user): ?>
                         <label>
                             <input type="checkbox" name="member_ids[]" value="<?php echo (int) $user['id']; ?>">
@@ -344,7 +359,6 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
     socket.onopen = () => {
         console.log('Connected to WebSocket Server on Render!');
         
-        // Msajili mtumiaji kwenye server ili ajulikane yupo online
         socket.send(JSON.stringify({
             type: 'register',
             user_id: currentUserId
@@ -356,7 +370,6 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
         try {
             const data = JSON.parse(event.data);
 
-            // Angalia kama ujumbe ni wa aina ya 'message'
             if (data.type === 'message') {
                 let shouldDisplay = false;
 
@@ -396,7 +409,6 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
         console.log('WebSocket disconnected. Reconnecting might be needed.');
     };
 
-    // 3. TUMA DATA KWENYE WEBSOCKET KABLA YA FOMU YA PHP HAIJARELOAD
     if (messageForm) {
         messageForm.addEventListener('submit', function(e) {
             const textarea = this.querySelector('textarea[name="message_text"]');
@@ -415,26 +427,23 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
                     sender_id: currentUserId,
                     sender_name: '<?php echo htmlspecialchars($current_user_name); ?>',
                     message_text: messageText,
-                    message_html: messageText.replace(/\n/g, '<br>'), // Inabadilisha newlines kuwa HTML linebreaks
+                    message_html: messageText.replace(/\n/g, '<br>'), 
                     receiver_id: selectedUserId,
                     group_id: selectedGroupId,
                     time_formatted: timeFormatted
                 };
                 
-                // Tuma kupitia WebSocket
                 socket.send(JSON.stringify(payload));
             }
         });
     }
 
-    // Sogeza kioo chini pindi ukurasa ukimaliza kufunguka
     document.addEventListener('DOMContentLoaded', () => {
         if (chatWindow) {
             chatWindow.scrollTop = chatWindow.scrollHeight;
         }
     });
 
-    // Kazi ndogo ya kuzuia HTML injection (XSS Protection)
     function htmlspecialchars(string) {
         return string.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
