@@ -237,7 +237,7 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
             border-left: 3px solid #0d6efd;
         }
 
-        /* MABORESHO: CSS ya Dot ya Online na Offline */
+        /* CSS ya Dot ya Online na Offline */
         .status-dot {
             width: 9px;
             height: 9px;
@@ -361,7 +361,6 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
                 <?php endif; ?>
             </div>
 
-            <!-- Tumeongeza id="chat-message-form" hapa ili kuidhibiti kwenye JavaScript -->
             <form method="post" id="chat-message-form" style="margin-top: 15px;">
                 <input type="hidden" name="send_message" value="1">
                 <input type="hidden" name="conversation_type" value="<?php echo htmlspecialchars($selected_type); ?>">
@@ -383,14 +382,13 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
     let selectedGroupId = <?php echo (int) $selected_group_id; ?>;
     let currentUserId = <?php echo (int) $current_user_id; ?>;
     const chatWindow = document.querySelector('.chat-window');
-    
-    // MABORESHO: Kulenga hasa form ya kutuma meseji kwa usahihi
     const messageForm = document.getElementById('chat-message-form');
 
-    const socket = new WebSocket('wss://khanmanagement-1.onrender.com');
+    // MABORESHO 1: Link inalenga njia mpya ya /ws kupitia port kuu ya Render ya .htaccess
+    const socket = new WebSocket('wss://khanmanagement-1.onrender.com/ws');
 
     socket.onopen = () => {
-        console.log('Connected to WebSocket Server on Render!');
+        console.log('Connected to WebSocket Server on Render through Reverse Proxy!');
         
         socket.send(JSON.stringify({
             type: 'register',
@@ -402,8 +400,9 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
         try {
             const data = JSON.parse(event.data);
 
-            if (data.type === 'online_status') {
-                updateOnlineStatus(data.users);
+            // MABORESHO 2: Kukubali data za 'online_status' au 'online_users'
+            if (data.type === 'online_status' || data.type === 'online_users') {
+                updateOnlineStatus(data.users || data.onlineUserIds);
             }
 
             if (data.type === 'message') {
@@ -417,7 +416,6 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
                 }
 
                 if (shouldDisplay) {
-                    // Ondoa lile neno "No messages yet" kama lipo kabla ya kuweka bubble mpya
                     const placeholder = document.getElementById('no-messages-placeholder');
                     if (placeholder) {
                         placeholder.remove();
@@ -443,10 +441,14 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
         }
     };
 
+    // MABORESHO 3: Kubadilisha ID zote kuwa String ili kuzuia String vs Integer type matching error
     function updateOnlineStatus(onlineUserIds) {
+        if (!onlineUserIds || !Array.isArray(onlineUserIds)) return;
+        const stringOnlineIds = onlineUserIds.map(id => String(id));
+
         document.querySelectorAll('.status-dot').forEach(dot => {
-            const userId = parseInt(dot.getAttribute('data-user-id'));
-            if (onlineUserIds.includes(userId)) {
+            const userId = dot.getAttribute('data-user-id');
+            if (stringOnlineIds.includes(String(userId))) {
                 dot.classList.add('online');
             } else {
                 dot.classList.remove('online');
@@ -464,7 +466,6 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
 
     if (messageForm) {
         messageForm.addEventListener('submit', function(e) {
-            // MABORESHO 1: Zuia mfumo wa PHP usisababishe page ku-refresh (No reloading)
             e.preventDefault(); 
 
             const textarea = this.querySelector('textarea[name="message_text"]');
@@ -490,8 +491,6 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
                 };
                 
                 socket.send(JSON.stringify(payload));
-
-                // MABORESHO 2: Safisha textarea iwe tupu baada ya kutuma ujumbe
                 textarea.value = ''; 
                 textarea.focus();
             }
