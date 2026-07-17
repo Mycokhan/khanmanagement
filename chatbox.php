@@ -157,7 +157,7 @@ $stmt = $conn->prepare("SELECT id, full_name FROM users WHERE id != ? ORDER BY f
 $stmt->execute([$current_user_id]);
 $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-$stmt = $conn->prepare("SELECT g.id, g.name, g.description FROM `groups` g JOIN group_members gm ON gm.group_id = g.id WHERE gm.user_id = ? ORDER g.name ASC");
+$stmt = $conn->prepare("SELECT g.id, g.name, g.description FROM `groups` g JOIN group_members gm ON gm.group_id = g.id WHERE gm.user_id = ? ORDER BY g.name ASC");
 $stmt->execute([$current_user_id]);
 $groups = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
