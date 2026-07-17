@@ -1,6 +1,6 @@
 RewriteEngine On
 
-# 1. Kama mtu anakuja kwa njia ya WebSocket (/ws)
-RewriteCond %{HTTP:Upgrade} =websocket [NC]
-RewriteCond %{HTTP:Connection} upgrade [NC]
-RewriteRule ^ws/?(.*) ws://127.0.0.1:8080/$1 [P,L]
+# Sheria ya /ws imezimwa kwa sababu WebSocket sasa inaunganishwa moja kwa moja bila kupitia Apache proxy
+# RewriteCond %{HTTP:Upgrade} =websocket [NC]
+# RewriteCond %{HTTP:Connection} upgrade [NC]
+# RewriteRule ^ws/?(.*) ws://127.0.0.1:8080/$1 [P,L]
