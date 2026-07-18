@@ -361,7 +361,8 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
                 <?php endif; ?>
             </div>
 
-            <form method="post" id="chat-message-form" style="margin-top: 15px;">
+            <!-- NJIA MBADALA: Fomu sasa ina action ya uhakika na name="send_message" kwenye button ili PHP ipokee data -->
+            <form method="post" action="chatbox.php?conversation_type=<?php echo urlencode($selected_type); ?>&<?php echo $selected_type === 'group' ? 'group_id=' . $selected_group_id : 'receiver_id=' . $selected_user_id; ?>" id="chat-message-form" style="margin-top: 15px;">
                 <input type="hidden" name="send_message" value="1">
                 <input type="hidden" name="conversation_type" value="<?php echo htmlspecialchars($selected_type); ?>">
                 <?php if ($selected_type === 'group'): ?>
@@ -370,7 +371,7 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
                     <input type="hidden" name="receiver_id" value="<?php echo (int) $selected_user_id; ?>">
                 <?php endif; ?>
                 <textarea name="message_text" rows="4" placeholder="Type your message here..." required></textarea>
-                <button type="submit">Send message</button>
+                <button type="submit" name="send_message">Send message</button>
             </form>
         <?php endif; ?>
     </div>
@@ -455,13 +456,13 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
 
     if (messageForm) {
         messageForm.addEventListener('submit', function(e) {
-            // MABORESHO MAKUBWA: Kama WebSocket haipo OPEN, tunaruhusu fomu iende PHP ya kawaida!
+            // MABORESHO MAKUBWA: Kama WebSocket haipo OPEN, fomu inaji-submit yenyewe kwenda kwenye PHP backend (Page refresh)
             if (socket.readyState !== WebSocket.OPEN) {
                 console.log('WebSocket is not connected. Sending message via standard PHP fallback...');
-                return; // Inaruhusu fomu iji-submit kwa njia ya kawaida (Page reload)
+                return; 
             }
 
-            // Kama WebSocket iko sawa, inatuma bila kurefresh page kama kawaida
+            // Kama WebSocket iko sawa (OPEN), inatuma kwa AJAX/WebSocket bila kurefresh page kama kawaida
             e.preventDefault(); 
             const textarea = this.querySelector('textarea[name="message_text"]');
             const messageText = textarea.value.trim();
