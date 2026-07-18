@@ -1,15 +1,28 @@
 <?php
-ob_start(); // Inazuia kosa la "Headers already sent" kwa kuhifadhi output kwanza
-session_start();
+// 1. Ulinzi wa Session na kuzuia isipotee wakati wa POST request
+ini_set('session.gc_maxlifetime', 86400); // Inatunza session kwa masaa 24
+session_set_cookie_params([
+    'lifetime' => 86400,
+    'path' => '/',
+    'secure' => true,     // Inalazimisha kutumia HTTPS (Inazuia session kufutika kule Render)
+    'httponly' => true,   // Inazuia XSS scripts kufikia cookie
+    'samesite' => 'Lax'
+]);
+
+ob_start(); // Inazuia kosa la "Headers already sent"
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 require "connect.php";
 
-if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
+// Kuangalia kama mtumiaji ameingia, usalama ukiwepo
+if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
+    header("Location: login.php?error=session_expired");
     exit();
 }
 
-$current_user_id = (int) ($_SESSION['user_id'] ?? 0);
+$current_user_id = (int) $_SESSION['user_id'];
 $current_user_name = $_SESSION['full_name'] ?? '';
 $message = "";
 $error = "";
@@ -265,7 +278,7 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
     </div>
 <div class="container">
     <h2>💬 Group and Direct Messaging</h2>
-    <p class="small">Welcome, <?php echo htmlspecialchars($current_user_name); ?>. Messages are end to end encrypted by mycokhan system.</p>
+    <p class="small">Welcome, <?php echo htmlspecialchars($current_user_name); ?>.</p>
 
     <?php if ($message !== ''): ?>
         <div class="alert alert-success"><?php echo htmlspecialchars($message); ?></div>
@@ -361,7 +374,7 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
                 <?php endif; ?>
             </div>
 
-            <!-- NJIA MBADALA: Fomu sasa ina action ya uhakika na name="send_message" kwenye button ili PHP ipokee data -->
+            <!-- Fomu iliyoboreshwa ikiwa na Action na Name kwenye Button ili isipoteze njia PHP ikirefresh -->
             <form method="post" action="chatbox.php?conversation_type=<?php echo urlencode($selected_type); ?>&<?php echo $selected_type === 'group' ? 'group_id=' . $selected_group_id : 'receiver_id=' . $selected_user_id; ?>" id="chat-message-form" style="margin-top: 15px;">
                 <input type="hidden" name="send_message" value="1">
                 <input type="hidden" name="conversation_type" value="<?php echo htmlspecialchars($selected_type); ?>">
@@ -456,13 +469,13 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
 
     if (messageForm) {
         messageForm.addEventListener('submit', function(e) {
-            // MABORESHO MAKUBWA: Kama WebSocket haipo OPEN, fomu inaji-submit yenyewe kwenda kwenye PHP backend (Page refresh)
+            // Kama WebSocket haipo OPEN, tunaruhusu fomu isubmit yenyewe kwenda PHP (Ukurasa utarefresh na ujumbe utatumwa)
             if (socket.readyState !== WebSocket.OPEN) {
                 console.log('WebSocket is not connected. Sending message via standard PHP fallback...');
                 return; 
             }
 
-            // Kama WebSocket iko sawa (OPEN), inatuma kwa AJAX/WebSocket bila kurefresh page kama kawaida
+            // Kama WebSocket ipo sawa, inatuma papo hapo bila kurefresh ukurasa
             e.preventDefault(); 
             const textarea = this.querySelector('textarea[name="message_text"]');
             const messageText = textarea.value.trim();
