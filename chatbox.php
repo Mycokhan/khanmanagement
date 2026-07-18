@@ -212,8 +212,8 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
         .box { border: 1px solid #e5e7eb; border-radius: 10px; padding: 15px; background: #fcfdff; }
         select, input[type="text"], textarea { width: 100%; padding: 10px; margin-top: 6px; border: 1px solid #ced4da; border-radius: 6px; box-sizing: border-box; }
         button { background: #0d6efd; color: white; border: 0; padding: 10px 14px; border-radius: 6px; cursor: pointer; margin-top: 10px; }
-        .chat-window { border: 1px solid #e5e7eb; border-radius: 10px; padding: 15px; min-height: 300px; max-height: 420px; overflow-y: auto; background: #f9fbff; }
-        .bubble { padding: 10px 12px; border-radius: 10px; margin-bottom: 8px; max-width: 80%; }
+        .chat-window { border: 1px solid #e5e7eb; border-radius: 10px; padding: 15px; min-height: 300px; max-height: 420px; overflow-y: auto; background: #f9fbff; scroll-behavior: smooth; }
+        .bubble { padding: 10px 12px; border-radius: 10px; margin-bottom: 8px; max-width: 80%; word-wrap: break-word; }
         .bubble.self { background: #0d6efd; color: white; margin-left: auto; }
         .bubble.other { background: #e9f2ff; color: #222; }
         .meta { font-size: 12px; opacity: 0.75; margin-bottom: 4px; }
@@ -374,7 +374,6 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
                 <?php endif; ?>
             </div>
 
-            <!-- Fomu iliyoboreshwa ikiwa na Action na Name kwenye Button ili isipoteze njia PHP ikirefresh -->
             <form method="post" action="chatbox.php?conversation_type=<?php echo urlencode($selected_type); ?>&<?php echo $selected_type === 'group' ? 'group_id=' . $selected_group_id : 'receiver_id=' . $selected_user_id; ?>" id="chat-message-form" style="margin-top: 15px;">
                 <input type="hidden" name="send_message" value="1">
                 <input type="hidden" name="conversation_type" value="<?php echo htmlspecialchars($selected_type); ?>">
@@ -419,11 +418,18 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
             if (data.type === 'message') {
                 let shouldDisplay = false;
 
-                if (selectedType === 'group' && data.conversation_type === 'group' && parseInt(data.group_id) === selectedGroupId) {
+                // MABORESHO: Kuhakikisha namba zote zinalinganishwa kama Integers ili kuzuia makosa ya String vs Int
+                const dataSenderId = parseInt(data.sender_id);
+                const dataReceiverId = parseInt(data.receiver_id);
+                const dataGroupId = parseInt(data.group_id);
+
+                if (selectedType === 'group' && data.conversation_type === 'group' && dataGroupId === selectedGroupId) {
                     shouldDisplay = true;
-                } else if (selectedType === 'direct' && data.conversation_type === 'direct' && 
-                          (parseInt(data.sender_id) === selectedUserId || parseInt(data.receiver_id) === selectedUserId)) {
-                    shouldDisplay = true;
+                } else if (selectedType === 'direct' && data.conversation_type === 'direct') {
+                    if ((dataSenderId === selectedUserId && dataReceiverId === currentUserId) || 
+                        (dataSenderId === currentUserId && dataReceiverId === selectedUserId)) {
+                        shouldDisplay = true;
+                    }
                 }
 
                 if (shouldDisplay) {
@@ -431,18 +437,26 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
                     if (placeholder) { placeholder.remove(); }
 
                     const bubble = document.createElement('div');
-                    const isSelf = parseInt(data.sender_id) === currentUserId;
+                    const isSelf = dataSenderId === currentUserId;
                     
                     bubble.className = 'bubble ' + (isSelf ? 'self' : 'other');
+                    
+                    // Jina la mtumaji: Kama ni mimi iandike 'You', vinginevyo iweke jina lililokuja toka server
+                    const displayName = isSelf ? 'You' : (data.sender_name ? data.sender_name : 'Member');
+                    
                     bubble.innerHTML = `
                         <div class="meta">
-                            ${isSelf ? 'You' : htmlspecialchars(data.sender_name)}
-                            • ${data.time_formatted}
+                            ${htmlspecialchars(displayName)}
+                            • ${data.time_formatted || 'Just now'}
                         </div>
-                        ${data.message_html}
+                        ${data.message_html || htmlspecialchars(data.message_text)}
                     `;
-                    chatWindow.appendChild(bubble);
-                    chatWindow.scrollTop = chatWindow.scrollHeight;
+                    
+                    if (chatWindow) {
+                        chatWindow.appendChild(bubble);
+                        // Kushusha chat window chini moja kwa moja ujumbe unapoingia
+                        chatWindow.scrollTop = chatWindow.scrollHeight;
+                    }
                 }
             }
         } catch (e) {
@@ -469,13 +483,11 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
 
     if (messageForm) {
         messageForm.addEventListener('submit', function(e) {
-            // Kama WebSocket haipo OPEN, tunaruhusu fomu isubmit yenyewe kwenda PHP (Ukurasa utarefresh na ujumbe utatumwa)
             if (socket.readyState !== WebSocket.OPEN) {
                 console.log('WebSocket is not connected. Sending message via standard PHP fallback...');
                 return; 
             }
 
-            // Kama WebSocket ipo sawa, inatuma papo hapo bila kurefresh ukurasa
             e.preventDefault(); 
             const textarea = this.querySelector('textarea[name="message_text"]');
             const messageText = textarea.value.trim();
