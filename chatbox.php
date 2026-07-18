@@ -384,12 +384,10 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
     const chatWindow = document.querySelector('.chat-window');
     const messageForm = document.getElementById('chat-message-form');
 
-    // MABORESHO: Tumeondoa '/ws' mwishoni ili kuachana na dhoruba za .htaccess proxy ya Render
     const socket = new WebSocket('wss://khanmanagement-1.onrender.com');
 
     socket.onopen = () => {
         console.log('Connected to WebSocket Server on Render directly!');
-        
         socket.send(JSON.stringify({
             type: 'register',
             user_id: currentUserId
@@ -416,9 +414,7 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
 
                 if (shouldDisplay) {
                     const placeholder = document.getElementById('no-messages-placeholder');
-                    if (placeholder) {
-                        placeholder.remove();
-                    }
+                    if (placeholder) { placeholder.remove(); }
 
                     const bubble = document.createElement('div');
                     const isSelf = parseInt(data.sender_id) === currentUserId;
@@ -454,22 +450,23 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
         });
     }
 
-    socket.onerror = (error) => {
-        console.error('WebSocket Error:', error);
-    };
-
-    socket.onclose = () => {
-        console.log('WebSocket disconnected.');
-    };
+    socket.onerror = (error) => { console.error('WebSocket Error:', error); };
+    socket.onclose = () => { console.log('WebSocket disconnected.'); };
 
     if (messageForm) {
         messageForm.addEventListener('submit', function(e) {
-            e.preventDefault(); 
+            // MABORESHO MAKUBWA: Kama WebSocket haipo OPEN, tunaruhusu fomu iende PHP ya kawaida!
+            if (socket.readyState !== WebSocket.OPEN) {
+                console.log('WebSocket is not connected. Sending message via standard PHP fallback...');
+                return; // Inaruhusu fomu iji-submit kwa njia ya kawaida (Page reload)
+            }
 
+            // Kama WebSocket iko sawa, inatuma bila kurefresh page kama kawaida
+            e.preventDefault(); 
             const textarea = this.querySelector('textarea[name="message_text"]');
             const messageText = textarea.value.trim();
             
-            if (messageText !== '' && socket.readyState === WebSocket.OPEN) {
+            if (messageText !== '') {
                 const now = new Date();
                 const timeFormatted = now.toLocaleDateString('en-US', { month: 'short' }) + " " + 
                                      String(now.getDate()).padStart(2, '0') + ", " + 
@@ -496,9 +493,7 @@ if ($selected_type === 'group' && $selected_group_id > 0) {
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        if (chatWindow) {
-            chatWindow.scrollTop = chatWindow.scrollHeight;
-        }
+        if (chatWindow) { chatWindow.scrollTop = chatWindow.scrollHeight; }
     });
 
     function htmlspecialchars(string) {
